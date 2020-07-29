@@ -13,7 +13,7 @@ public abstract class BaseHandler {
     }
 
     public String handleData(final String data) {
-
+        return "Not implemented!";
     }
 
     public static final class Factory<Handler extends BaseHandler> {
@@ -24,7 +24,7 @@ public abstract class BaseHandler {
             this.handlerBuilder = handlerBuilder;
             this.functionMap = new HashMap<>();
 
-            for (Method method : clazz.getMethods()) {
+            for (final Method method : clazz.getMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
                     functionMap.put(method.getAnnotation(Command.class).trigger(), method);
                 }
@@ -32,7 +32,7 @@ public abstract class BaseHandler {
         }
 
         public Handler buildHandler() throws Exception {
-            Handler handler = handlerBuilder.call();
+            final Handler handler = handlerBuilder.call();
             handler.setFunctions(functionMap);
             return handler;
         }
