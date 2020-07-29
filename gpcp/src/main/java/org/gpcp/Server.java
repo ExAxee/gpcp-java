@@ -10,14 +10,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Server extends Thread {
     final BaseHandler.Factory<?> handlerFactory;
     final ServerSocket serverSocket;
     List<SocketThread> socketThreads;
 
-    Server(final BaseHandler.Factory<?> handlerFactory, boolean reuseAddress) throws IOException {
+    public Server(final BaseHandler.Factory<?> handlerFactory,
+                  final boolean reuseAddress) throws IOException {
         this.handlerFactory = handlerFactory;
         serverSocket = new ServerSocket();
 
@@ -35,18 +35,23 @@ public class Server extends Thread {
         start();
     }
 
-
     public void closeConnection(final String ip) throws IOException {
+        final ArrayList<SocketThread> socketThreadsToRemove = new ArrayList<>();
         for (final SocketThread socketThread : socketThreads) {
             if (socketThread.getIp().equals(ip)) {
                 socketThread.closeConnection();
+                socketThreadsToRemove.add(socketThread);
             }
         }
+        socketThreads.removeAll(socketThreadsToRemove);
     }
 
     public void stopServer() throws IOException {
         interrupt();
 
+        if (socketThreads == null) {
+            return;
+        }
         for (final SocketThread socketThread : socketThreads) {
             socketThread.closeConnection();
         }
@@ -60,7 +65,7 @@ public class Server extends Thread {
             try {
                 final SocketThread socketThread =
                         new SocketThread(serverSocket.accept(), handlerFactory.buildHandler());
-                socketThread.run();
+                socketThread.start();
                 socketThreads.add(socketThread);
             } catch (Exception e) {
                 // TODO better error handling
@@ -69,7 +74,7 @@ public class Server extends Thread {
         }
     }
 
-    private static class SocketThread extends Thread {
+    private class SocketThread extends Thread {
         private final Socket socket;
         private final BaseHandler handler;
 
@@ -94,8 +99,6 @@ public class Server extends Thread {
                     Packet.sendAll(socket, handler.handleData(data));
                 }
 
-                closeConnection();
-
             } catch (InterruptedIOException e) {
                 // TODO remove printStackTrace
                 e.printStackTrace();
@@ -106,6 +109,8 @@ public class Server extends Thread {
 
             try {
                 closeConnection();
+                // after everything was closed, remove this thread from the thread list
+                socketThreads.remove(this);
             } catch (IOException e) {
                 // TODO better error handling
                 e.printStackTrace();
