@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface Command {
     String trigger() default ""; // defaults to the name of the function
+    String description() default "";
 }

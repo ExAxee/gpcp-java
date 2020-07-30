@@ -1,6 +1,9 @@
 package org.gpcp;
 
+import com.grack.nanojson.JsonArray;
+
 import org.gpcp.utils.BaseHandler;
+import org.gpcp.utils.Command;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -12,9 +15,24 @@ public class ServerTest {
 
     static class Handler extends BaseHandler {
         @Override
+        public Object unknownCommand(String commandTrigger, JsonArray arguments) {
+            return "Unknown command: " + commandTrigger;
+        }
+
+        @Override
         public String handleData(final String data) {
             System.out.println("Received data: " + data);
             return data;
+        }
+
+        @Command
+        public double pi() {
+            return 3.14159;
+        }
+
+        @Command
+        public Integer massimo(Integer a, Integer b) {
+            return Math.max(a, b);
         }
     }
 
