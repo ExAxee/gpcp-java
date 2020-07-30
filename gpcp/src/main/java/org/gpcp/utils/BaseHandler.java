@@ -20,7 +20,7 @@ import org.gpcp.types.AggregateTypeConverter;
 import org.gpcp.types.JsonSerializableTypeConverter;
 import org.gpcp.types.TypeConverter;
 
-import static org.gpcp.types.JsonSerializableTypeConverter.TypeId.*;
+import static org.gpcp.types.TypeId.*;
 
 public abstract class BaseHandler {
     protected Map<String, CommandData> methodMap;
@@ -123,14 +123,14 @@ public abstract class BaseHandler {
             this.methodMap = new HashMap<>();
             this.aggregateTypeConverter = new AggregateTypeConverter(
                     new JsonSerializableTypeConverter<>(jsonObjectId, JsonObject.class),
-                    new JsonSerializableTypeConverter<>(jsonObjectId, JsonArray.class),
+                    new JsonSerializableTypeConverter<>(jsonArrayId, JsonArray.class),
                     new JsonSerializableTypeConverter<>(stringId, String.class),
-                    new JsonSerializableTypeConverter<>(integerId, Boolean.class),
-                    new JsonSerializableTypeConverter<>(integerId, Integer.class),
-                    new JsonSerializableTypeConverter<>(integerId, Long.class),
-                    new JsonSerializableTypeConverter<>(floatId, Float.class),
-                    new JsonSerializableTypeConverter<>(floatId, Double.class),
-                    new JsonSerializableTypeConverter<>(integerId, Number.class));
+                    new JsonSerializableTypeConverter<>(booleanId, Boolean.class, boolean.class),
+                    new JsonSerializableTypeConverter<>(integerId, Integer.class, int.class),
+                    new JsonSerializableTypeConverter<>(integerId, Long.class, long.class),
+                    new JsonSerializableTypeConverter<>(floatId, Float.class, float.class),
+                    new JsonSerializableTypeConverter<>(floatId, Double.class, double.class),
+                    new JsonSerializableTypeConverter<>(floatId, Number.class));
 
             for (final Method method : clazz.getMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {

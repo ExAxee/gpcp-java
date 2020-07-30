@@ -30,5 +30,11 @@ public interface TypeConverter<T> {
      * @param targetClass the target class
      * @return an unique integer id that identifies the type
      */
-    Integer typeId(Class<?> targetClass);
+    int typeId(Class<?> targetClass);
+
+    static ClassCastException getClassCastException(final Class<?> expected,
+                                                    final Class<?> actual) {
+        return new ClassCastException("Expected type " + expected.getSimpleName()
+                + " but got " + actual.getSimpleName());
+    }
 }

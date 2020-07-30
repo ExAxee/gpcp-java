@@ -47,7 +47,7 @@ public final class AggregateTypeConverter implements TypeConverter<Object> {
     }
 
     @Override
-    public Integer typeId(final Class<?> targetClass) {
+    public int typeId(final Class<?> targetClass) {
         for (final TypeConverter<?> typeConverter : typeConverters) {
             if (typeConverter.accepts(targetClass)) {
                 return typeConverter.typeId(targetClass);

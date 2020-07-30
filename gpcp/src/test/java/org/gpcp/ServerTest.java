@@ -26,12 +26,12 @@ public class ServerTest {
         }
 
         @Command
-        public Double pi() {
+        public double pi() {
             return 3.14159;
         }
 
         @Command
-        public Integer massimo(Integer a, Integer b) {
+        public int massimo(int a, int b) {
             return Math.max(a, b);
         }
     }
