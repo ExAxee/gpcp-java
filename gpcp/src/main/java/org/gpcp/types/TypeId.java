@@ -6,7 +6,8 @@ public enum TypeId {
     stringId(2),
     booleanId(3),
     integerId(4),
-    floatId(5);
+    floatId(5),
+    bytesId(6);
 
     private final int id;
     TypeId(int id) {

@@ -17,6 +17,7 @@ import com.grack.nanojson.JsonParserException;
 import com.grack.nanojson.JsonWriter;
 
 import org.gpcp.types.AggregateTypeConverter;
+import org.gpcp.types.BytesType;
 import org.gpcp.types.JsonSerializableTypeConverter;
 import org.gpcp.types.TypeConverter;
 
@@ -130,7 +131,8 @@ public abstract class BaseHandler {
                     new JsonSerializableTypeConverter<>(integerId, Long.class, long.class),
                     new JsonSerializableTypeConverter<>(floatId, Float.class, float.class),
                     new JsonSerializableTypeConverter<>(floatId, Double.class, double.class),
-                    new JsonSerializableTypeConverter<>(floatId, Number.class));
+                    new JsonSerializableTypeConverter<>(floatId, Number.class),
+                    new BytesType());
 
             for (final Method method : clazz.getMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {

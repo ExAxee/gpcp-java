@@ -9,6 +9,8 @@ import org.junit.Test;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 public class ServerTest {
@@ -26,12 +28,17 @@ public class ServerTest {
         }
 
         @Command
+        public byte[] concat(final String string, final byte[] bytes) {
+            return (string + new String(bytes)).getBytes();
+        }
+
+        @Command
         public double pi() {
             return 3.14159;
         }
 
         @Command
-        public int massimo(int a, int b) {
+        public int massimo(final int a, final int b) {
             return Math.max(a, b);
         }
     }
