@@ -22,11 +22,11 @@ public class ServerTest {
         @Override
         public String handleData(final String data) {
             System.out.println("Received data: " + data);
-            return data;
+            return super.handleData(data);
         }
 
         @Command
-        public double pi() {
+        public Double pi() {
             return 3.14159;
         }
 

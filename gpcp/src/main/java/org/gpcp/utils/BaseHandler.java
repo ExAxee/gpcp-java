@@ -1,8 +1,8 @@
 package org.gpcp.utils;
 
-import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -10,15 +10,20 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 import com.grack.nanojson.JsonArray;
+import com.grack.nanojson.JsonBuilder;
 import com.grack.nanojson.JsonObject;
+import com.grack.nanojson.JsonParser;
+import com.grack.nanojson.JsonParserException;
 import com.grack.nanojson.JsonWriter;
 
 import org.gpcp.types.AggregateTypeConverter;
 import org.gpcp.types.JsonSerializableTypeConverter;
 import org.gpcp.types.TypeConverter;
 
+import static org.gpcp.types.JsonSerializableTypeConverter.TypeId.*;
+
 public abstract class BaseHandler {
-    protected Map<String, CommandData> functionMap;
+    protected Map<String, CommandData> methodMap;
     protected TypeConverter<Object> typeConverter;
     protected BaseHandler extendingHandler;
 
@@ -31,9 +36,19 @@ public abstract class BaseHandler {
     public abstract Object unknownCommand(final String commandTrigger,
                                           final JsonArray arguments);
 
+    @Command
+    public JsonArray requestCommands() {
+        final JsonArray serializedCommands = new JsonArray();
+        for (final Map.Entry<String, CommandData> commandData : methodMap.entrySet()) {
+            serializedCommands.add(commandData.getValue()
+                    .getJsonSerializedCommand(commandData.getKey(), typeConverter));
+        }
+        return serializedCommands;
+    }
 
-    final void setFunctions(final Map<String, CommandData> functionMap) {
-        this.functionMap = functionMap;
+
+    final void setMethodMap(final Map<String, CommandData> functionMap) {
+        this.methodMap = functionMap;
     }
 
     final void setTypeConverter(final TypeConverter<Object> typeConverter) {
@@ -60,28 +75,38 @@ public abstract class BaseHandler {
     public String handleData(final String data) {
         final int separatorIndex = data.indexOf("[");
         final String commandTrigger = data.substring(0, separatorIndex);
-        final JsonArray arguments = JsonArray.from(data.substring(separatorIndex));
 
-        final CommandData command = functionMap.get(commandTrigger);
         Object result;
-        if (command == null) {
-            result = unknownCommand(commandTrigger, arguments);
-        } else {
-            final Type[] functionArguments = command.function.getParameterTypes();
-            final Object[] convertedArguments = new Object[functionArguments.length];
-            for (int i = 0; i < functionArguments.length; i++) {
-                convertedArguments[i] =
-                        typeConverter.fromJson(arguments.get(i), typeToClass(functionArguments[i]));
+        final JsonArray arguments;
+        try {
+            arguments = JsonParser.array().from(data.substring(separatorIndex));
+
+            final CommandData command = methodMap.get(commandTrigger);
+            if (command == null) {
+                result = unknownCommand(commandTrigger, arguments);
+            } else {
+                final Type[] methodArguments = command.method.getParameterTypes();
+                final Object[] convertedArguments = new Object[methodArguments.length];
+                for (int i = 0; i < methodArguments.length; i++) {
+                    System.out.println(arguments.get(i) + " " + arguments.get(i).getClass());
+                    convertedArguments[i] =
+                            typeConverter.fromJson(arguments.get(i), typeToClass(methodArguments[i]));
+                }
+
+                try {
+                    result = command.method.invoke(extendingHandler, convertedArguments);
+
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    // TODO proper error handling
+                    e.printStackTrace();
+                    result = e.getMessage();
+                }
             }
 
-            try {
-                result = command.function.invoke(extendingHandler, convertedArguments);
-                
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                // TODO proper error handling
-                e.printStackTrace();
-                result = e.getMessage();
-            }
+        } catch (JsonParserException e) {
+            // TODO proper error handling
+            e.printStackTrace();
+            result = e.getMessage();
         }
 
         return JsonWriter.string(typeConverter.toJson(result));
@@ -90,22 +115,22 @@ public abstract class BaseHandler {
 
     public static final class Factory<Handler extends BaseHandler> {
         private final Callable<Handler> handlerBuilder;
-        private final Map<String, CommandData> functionMap;
+        private final Map<String, CommandData> methodMap;
         private final AggregateTypeConverter aggregateTypeConverter;
 
         public Factory(final Class<Handler> clazz, final Callable<Handler> handlerBuilder) {
             this.handlerBuilder = handlerBuilder;
-            this.functionMap = new HashMap<>();
+            this.methodMap = new HashMap<>();
             this.aggregateTypeConverter = new AggregateTypeConverter(
-                    new JsonSerializableTypeConverter<>(JsonObject.class),
-                    new JsonSerializableTypeConverter<>(JsonArray.class),
-                    new JsonSerializableTypeConverter<>(String.class),
-                    new JsonSerializableTypeConverter<>(Boolean.class),
-                    new JsonSerializableTypeConverter<>(Integer.class),
-                    new JsonSerializableTypeConverter<>(Long.class),
-                    new JsonSerializableTypeConverter<>(Float.class),
-                    new JsonSerializableTypeConverter<>(Double.class),
-                    new JsonSerializableTypeConverter<>(Number.class));
+                    new JsonSerializableTypeConverter<>(jsonObjectId, JsonObject.class),
+                    new JsonSerializableTypeConverter<>(jsonObjectId, JsonArray.class),
+                    new JsonSerializableTypeConverter<>(stringId, String.class),
+                    new JsonSerializableTypeConverter<>(integerId, Boolean.class),
+                    new JsonSerializableTypeConverter<>(integerId, Integer.class),
+                    new JsonSerializableTypeConverter<>(integerId, Long.class),
+                    new JsonSerializableTypeConverter<>(floatId, Float.class),
+                    new JsonSerializableTypeConverter<>(floatId, Double.class),
+                    new JsonSerializableTypeConverter<>(integerId, Number.class));
 
             for (final Method method : clazz.getMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
@@ -119,7 +144,8 @@ public abstract class BaseHandler {
                     }
 
                     method.setAccessible(true);
-                    functionMap.put(trigger, new CommandData(method, command.description()));
+                    methodMap.put(trigger, new CommandData(method,
+                            command.description(), command.argumentNames()));
                 }
             }
         }
@@ -135,7 +161,7 @@ public abstract class BaseHandler {
 
         public Handler buildHandler() throws Exception {
             final Handler handler = handlerBuilder.call();
-            handler.setFunctions(functionMap);
+            handler.setMethodMap(methodMap);
             handler.setTypeConverter(aggregateTypeConverter);
             handler.setExtendingHandler(handler);
             return handler;
@@ -143,12 +169,45 @@ public abstract class BaseHandler {
     }
 
     private static final class CommandData {
-        final Method function;
+        final Method method;
         final String description;
+        final String[] argumentNames;
 
-        CommandData(final Method function, final String description) {
-            this.function = function;
+        CommandData(final Method method,
+                    final String description,
+                    final String[] argumentNames) {
+            this.method = method;
             this.description = description;
+            this.argumentNames = argumentNames;
+        }
+
+        JsonObject getJsonSerializedCommand(final String trigger, final TypeConverter<Object> typeConverter) {
+            final JsonBuilder<JsonObject> arrayBuilder = JsonObject.builder()
+                    .value("name", trigger)
+                    .value("return_type",
+                            typeConverter.typeId(typeToClass(method.getReturnType())))
+                    .value("description", description.isEmpty() ? null : description)
+                    .array("arguments");
+
+            final Parameter[] parameters = method.getParameters();
+            for (int i = 0; i < parameters.length; i++) {
+                final String name;
+                if (i < argumentNames.length) {
+                    name = argumentNames[i];
+                } else if (parameters[i].isNamePresent()) {
+                    name = parameters[i].getName();
+                } else {
+                    name = String.valueOf(i);
+                }
+
+                arrayBuilder.object()
+                        .value("type",
+                                typeConverter.typeId(typeToClass(parameters[i].getType())))
+                        .value("name", name)
+                        .end();
+            }
+
+            return arrayBuilder.end().done();
         }
     }
 }

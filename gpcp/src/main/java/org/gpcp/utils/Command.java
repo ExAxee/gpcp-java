@@ -10,4 +10,5 @@ import java.lang.annotation.Target;
 public @interface Command {
     String trigger() default ""; // defaults to the name of the function
     String description() default "";
+    String[] argumentNames() default {};
 }

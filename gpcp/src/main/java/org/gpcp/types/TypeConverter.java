@@ -25,4 +25,10 @@ public interface TypeConverter<T> {
      * @return whether this type converter is able to convert to and from the provided target class
      */
     boolean accepts(Class<?> targetClass);
+
+    /**
+     * @param targetClass the target class
+     * @return an unique integer id that identifies the type
+     */
+    Integer typeId(Class<?> targetClass);
 }

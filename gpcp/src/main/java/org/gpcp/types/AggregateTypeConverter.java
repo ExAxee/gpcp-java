@@ -15,10 +15,6 @@ public final class AggregateTypeConverter implements TypeConverter<Object> {
         typeConverters.add(typeConverter);
     }
 
-    public List<TypeConverter<?>> getTypeConverters() {
-        return typeConverters;
-    }
-
 
     @Override
     public final Object fromJson(final Object json, final Class<?> expectedClass) {
@@ -41,13 +37,23 @@ public final class AggregateTypeConverter implements TypeConverter<Object> {
     }
 
     @Override
-    public boolean accepts(Class<?> targetClass) {
+    public boolean accepts(final Class<?> targetClass) {
         for (final TypeConverter<?> typeConverter : typeConverters) {
             if (typeConverter.accepts(targetClass)) {
                 return true;
             }
         }
         return false;
+    }
+
+    @Override
+    public Integer typeId(final Class<?> targetClass) {
+        for (final TypeConverter<?> typeConverter : typeConverters) {
+            if (typeConverter.accepts(targetClass)) {
+                return typeConverter.typeId(targetClass);
+            }
+        }
+        throw classCastException(targetClass);
     }
 
     private ClassCastException classCastException(final Class<?> clazz) {
